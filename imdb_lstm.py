@@ -34,7 +34,7 @@ print(len(x_test), 'test sequences')
 # 重新划分训练集、测试集
 x = np.concatenate((x_train, x_test), axis=0)
 y = np.concatenate((y_train, y_test), axis=0)
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33333, random_state=42)
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33333, random_state=77)
 
 print('Pad sequences (samples x time)')
 x_train = sequence.pad_sequences(x_train, maxlen=maxlen)
@@ -45,7 +45,8 @@ print('x_test shape:', x_test.shape)
 print('Build model...')
 model = Sequential()
 model.add(Embedding(max_features, 128))
-model.add(LSTM(128, dropout=0.2, recurrent_dropout=0.2))
+model.add(LSTM(64, dropout=0.3, recurrent_dropout=0.3))
+model.add(LSTM(32, activation='relu', dropout=0.3, recurrent_dropout=0.2))
 model.add(Dense(1, activation='sigmoid'))
 
 # try using different optimizers and different optimizer configs
@@ -55,7 +56,7 @@ model.compile(loss='binary_crossentropy',
 
 print('Train...')
 model.fit(x_train, y_train,
-          batch_size=batch_size,
+          batch_size=64,
           epochs=15,
           validation_data=(x_test, y_test))
 score, acc = model.evaluate(x_test, y_test,
