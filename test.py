@@ -28,12 +28,28 @@ y_class = ['投诉（含抱怨）网络问题', '投诉（含抱怨）营销问�
 with open('callreason.train.fj_and_sh.2w', 'r', encoding='UTF-8') as train_txt:
     content = train_txt.read()
 call_list = content.split('\n\n')
-# print(call_list[1])
+print(call_list[1])
+for i in call_list[1].split('\t'):
+    print(i)
 
 x_train = []
 y_train = []
-
+# 遍历每个来电数据，提取
 for ele in call_list:
     if ele == '':
         continue
     sents = ele.split('\n')
+    y_str = sents[0].split('\t')[1:]    # 两个元素或一个 一级分类 二级分类
+    x_str = []  # 多条对话
+    for i in sents[1:]:
+        x_str.append(i.split('\t')[1])
+    x_train.append(x_str)
+    y_train.append(y_str)
+
+# 分词
+X_train = []
+for x in x_train:
+    x_split = []
+    for s in x:
+        x_split.extend(jieba.lcut(s))
+    X_train.append(x_split)
