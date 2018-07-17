@@ -20,6 +20,7 @@
 # # 训练模型，以 32 个样本为一个 batch 进行迭代
 # model.fit(data, one_hot_labels, epochs=10, batch_size=32)
 import jieba
+import word2vec
 
 # 45来电原因
 y_class = ['投诉（含抱怨）网络问题', '投诉（含抱怨）营销问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', \
@@ -48,8 +49,19 @@ for ele in call_list:
 
 # 分词
 X_train = []
+w_str = ''
 for x in x_train:
     x_split = []
     for s in x:
-        x_split.extend(jieba.lcut(s))
+        line = jieba.lcut(s)
+        x_split.extend(line)
+        l_str = ' '.join(line) + '\n'
+        w_str = w_str + l_str
+    # w_str = w_str + '$'
     X_train.append(x_split)
+with open('seg', 'w', encoding='UTF-8') as fw:
+    fw.write(w_str)
+
+word2vec.word2vec('seg', 'vec', size=100, verbose=True)
+model = word2vec.load('vec')
+print(model['你好'].shape)
