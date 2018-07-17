@@ -62,6 +62,6 @@ for x in x_train:
 with open('seg', 'w', encoding='UTF-8') as fw:
     fw.write(w_str)
 
-word2vec.word2vec('seg', 'vec', size=100, verbose=True)
-model = word2vec.load('vec')
-print(model['你好'].shape)
+word2vec.word2vec('seg', 'vec.bin', size=100, verbose=True)
+model = word2vec.load('vec.bin')
+print(model['你好'])
