@@ -50,6 +50,9 @@ for ele in call_list:
 # 分词
 X_train = []
 w_str = ''
+jieba.suggest_freq('兆', tune=True)
+jieba.suggest_freq('块', tune=True)
+jieba.suggest_freq('流量', tune=True)
 for x in x_train:
     x_split = []
     for s in x:
