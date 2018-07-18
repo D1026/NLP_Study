@@ -62,6 +62,16 @@ for x in x_train:
 with open('seg', 'w', encoding='UTF-8') as fw:
     fw.write(w_str)
 
-word2vec.word2vec('seg', 'vec.bin', size=100, verbose=True)
+word2vec.word2vec('seg', 'vec.bin', size=10, verbose=True)
 model = word2vec.load('vec.bin')
-print(model['你好'])
+
+#
+
+
+# vectorization
+x_vec = []
+for x in X_train:
+    s_vec = []
+    for vocab in x:
+        s_vec.append(model[vocab])
+    x_vec.append(s_vec)
