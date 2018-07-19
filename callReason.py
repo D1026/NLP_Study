@@ -1,30 +1,16 @@
-# from keras.models import Sequential
-# from keras.layers import Dense, Activation
-# import keras
-#
-# model = Sequential()
-# model.add(Dense(32, activation='relu', input_dim=100))
-# model.add(Dense(10, activation='softmax'))
-# model.compile(optimizer='rmsprop',
-#               loss='categorical_crossentropy',
-#               metrics=['accuracy'])
-#
-# # 生成虚拟数据
-# import numpy as np
-# data = np.random.random((1000, 100))
-# labels = np.random.randint(10, size=(1000, 1))
-#
-# # 将标签转换为分类的 one-hot 编码
-# one_hot_labels = keras.utils.to_categorical(labels, num_classes=10)
-#
-# # 训练模型，以 32 个样本为一个 batch 进行迭代
-# model.fit(data, one_hot_labels, epochs=10, batch_size=32)
 import jieba
 import word2vec
+import numpy as np
+from sklearn.model_selection import train_test_split
 
 # 45来电原因
 y_class = ['投诉（含抱怨）网络问题', '投诉（含抱怨）营销问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', \
-           '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', ]
+           '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', \
+           '办理开通', '办理取消', '办理变更', '办理下载/设置', '办理转户', '办理打印/邮寄', '办理重置/修改/补发', \
+           '办理缴费', '办理移机/装机/拆机', '办理停复机', '办理补换卡', '办理入网', '办理销户/重开', \
+           '咨询（含查询）产品/业务功能', '咨询（含查询）账户信息', '咨询（含查询）业务资费', '咨询（含查询）业务订购信息查询', '咨询（含查询）使用方式', '咨询（含查询）办理方式', '咨询（含查询）业务规定', \
+           '咨询（含查询）号码状态', '咨询（含查询）用户资料', '咨询（含查询）服务渠道信息', '咨询（含查询）工单处理结果', '咨询（含查询）电商货品信息', '咨询（含查询）营销活动信息', '咨询（含查询）宽带覆盖范围', \
+           '表扬及建议表扬', '表扬及建议建议', '特殊来电无声电话', '特殊来电骚扰电话', '转归属地10086', '非移动业务', 'c', '非来电']
 
 with open('callreason.train.fj_and_sh.2w', 'r', encoding='UTF-8') as train_txt:
     content = train_txt.read()
@@ -41,12 +27,21 @@ for ele in call_list:
         continue
     sents = ele.split('\n')
     y_str = sents[0].split('\t')[1:]    # 两个元素或一个 一级分类 二级分类
+    y_str = ''.join(y_str)
     x_str = []  # 多条对话
     for i in sents[1:]:
         x_str.append(i.split('\t')[1])
     x_train.append(x_str)
     y_train.append(y_str)
-
+#
+y = [[0 for i in range(45)] for j in range(len(x_train))]
+for i in range(len(y_train)):
+    for j in range(len(y_class)):
+        if y_train[i] == y_class[j]:
+            y[i][j] = 1
+#
+print(y[0])
+print(len(y))
 # 分词
 X_train = []
 w_str = ''
@@ -85,6 +80,8 @@ print(sequences[0])
 print(len(sequences))
 
 x_data = pad_sequences(sequences, maxlen=500, truncating='pre')
+#
+x_train, x_test, y_train, y_test = train_test_split(x_data, y, test_size=0.33333, random_state=77)
 
 from keras.models import Sequential
 from keras.layers import Dense, Embedding
@@ -95,4 +92,20 @@ model = Sequential()
 model.add(Embedding(20000, 128))
 model.add(LSTM(64, dropout=0.3, recurrent_dropout=0.3))
 model.add(LSTM(32, activation='relu', dropout=0.3, recurrent_dropout=0.2))
-model.add(Dense(1, activation='sigmoid'))
+model.add(Dense(45, activation='sigmoid'))
+
+# try using different optimizers and different optimizer configs
+model.compile(loss='binary_crossentropy',
+              optimizer='adam',
+              metrics=['accuracy'])
+
+print('Train...')
+model.fit(x_train, y_train,
+          batch_size=64,
+          epochs=15,
+          validation_data=(x_test, y_test))
+
+score, acc = model.evaluate(x_test, y_test,
+                            batch_size=64)
+print('Test score:', score)
+print('Test accuracy:', acc)
