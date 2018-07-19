@@ -2,10 +2,13 @@ import jieba
 import word2vec
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from keras.utils import np_utils
+
 
 # 45来电原因
-y_class = ['投诉（含抱怨）网络问题', '投诉（含抱怨）营销问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', \
-           '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）费用问题', \
+y_class = ['投诉（含抱怨）网络问题', '投诉（含抱怨）营销问题', '投诉（含抱怨）费用问题', '投诉（含抱怨）服务问题', '投诉（含抱怨）业务使用问题', \
+           '投诉（含抱怨）业务办理问题', '投诉（含抱怨）业务规定不满', '投诉（含抱怨）不知情定制问题', '投诉（含抱怨）信息安全问题', '投诉（含抱怨）电商售后问题', \
            '办理开通', '办理取消', '办理变更', '办理下载/设置', '办理转户', '办理打印/邮寄', '办理重置/修改/补发', \
            '办理缴费', '办理移机/装机/拆机', '办理停复机', '办理补换卡', '办理入网', '办理销户/重开', \
            '咨询（含查询）产品/业务功能', '咨询（含查询）账户信息', '咨询（含查询）业务资费', '咨询（含查询）业务订购信息查询', '咨询（含查询）使用方式', '咨询（含查询）办理方式', '咨询（含查询）业务规定', \
@@ -33,7 +36,13 @@ for ele in call_list:
         x_str.append(i.split('\t')[1])
     x_train.append(x_str)
     y_train.append(y_str)
-#
+# -----
+encoder = LabelEncoder()
+encoded_Y = encoder.fit_transform(y_train)
+# convert integers to dummy variables (one hot encoding)
+dummy_y = np_utils.to_categorical(encoded_Y)
+
+#手工生成多分类标签
 y = [[0 for i in range(45)] for j in range(len(x_train))]
 for i in range(len(y_train)):
     for j in range(len(y_class)):
@@ -45,8 +54,7 @@ for i in range(len(y_train)):
             break
     print(y[i])
 #
-print(y[0])
-print(len(y))
+y = np.array(y)
 # 分词
 X_train = []
 w_str = ''
@@ -96,10 +104,10 @@ print('Build model...')
 model = Sequential()
 model.add(Embedding(20000, 128))
 model.add(LSTM(64, dropout=0.3, recurrent_dropout=0.3))
-model.add(Dense(45, activation='sigmoid'))
+model.add(Dense(45, activation='softmax'))
 
 # try using different optimizers and different optimizer configs
-model.compile(loss='binary_crossentropy',
+model.compile(loss='categorical_crossentropy',
               optimizer='adam',
               metrics=['accuracy'])
 
