@@ -97,8 +97,8 @@ x_data = pad_sequences(sequences, maxlen=500, truncating='pre')
 x_train, x_test, y_train, y_test = train_test_split(x_data, y, test_size=0.33333, random_state=77)
 #
 import pickle
-with open('xy.pkl', 'wb') as f:
-    pickle.dump((x_data, y), f)
+with open('xxyy.pkl', 'wb') as f:
+    pickle.dump((x_train, x_test, y_train, y_test), f)
 
 # LSTM 目前最高准确率 0.4528
 from keras.models import Sequential
