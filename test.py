@@ -57,24 +57,42 @@ for x in x_train:
     x_split = []
     for s in x:
         line = jieba.lcut(s)
-        x_split.extend(line)
+        # 删除信息量几乎为0的词
+        for i in line:
+            if i in ('你好', '您好', '请讲', '请说'):
+                line.remove(i)
+        if len(line) > 0:
+            x_split.extend(line)
+
+        word_str = ' '.join(x_split)
         l_str = ' '.join(line) + '\n'
         w_str = w_str + l_str
     # w_str = w_str + '$'
-    X_train.append(x_split)
-with open('seg', 'w', encoding='UTF-8') as fw:
-    fw.write(w_str)
+    X_train.append(' '.join(x_split))
 
-word2vec.word2vec('seg', 'vec.bin', size=10, verbose=True)
-model = word2vec.load('vec.bin')
+# with open('seg', 'w', encoding='UTF-8') as fw:
+#     fw.write(w_str)
 
-#
+# word2vec.word2vec('seg', 'vec.bin', size=10, verbose=True)
+# model = word2vec.load('vec.bin')
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+tokenizer = Tokenizer(nb_words=20000)
+tokenizer.fit_on_texts(X_train)
+sequences = tokenizer.texts_to_sequences(X_train)
 
+print(sequences[0])
+print(len(sequences))
 
-# vectorization
-x_vec = []
-for x in X_train:
-    s_vec = []
-    for vocab in x:
-        s_vec.append(model[vocab])
-    x_vec.append(s_vec)
+x_data = pad_sequences(sequences, maxlen=500, truncating='pre')
+
+from keras.models import Sequential
+from keras.layers import Dense, Embedding
+from keras.layers import LSTM
+
+print('Build model...')
+model = Sequential()
+model.add(Embedding(20000, 128))
+model.add(LSTM(64, dropout=0.3, recurrent_dropout=0.3))
+model.add(LSTM(32, activation='relu', dropout=0.3, recurrent_dropout=0.2))
+model.add(Dense(1, activation='sigmoid'))
