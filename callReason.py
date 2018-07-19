@@ -37,8 +37,13 @@ for ele in call_list:
 y = [[0 for i in range(45)] for j in range(len(x_train))]
 for i in range(len(y_train)):
     for j in range(len(y_class)):
+        #
+        print('i = '+str(i)+'   j= '+str(j)+'   yti = '+y_train[i] + '  ycj= ' + y_class[j])
         if y_train[i] == y_class[j]:
+            print('匹配')
             y[i][j] = 1
+            break
+    print(y[i])
 #
 print(y[0])
 print(len(y))
@@ -91,7 +96,6 @@ print('Build model...')
 model = Sequential()
 model.add(Embedding(20000, 128))
 model.add(LSTM(64, dropout=0.3, recurrent_dropout=0.3))
-model.add(LSTM(32, activation='relu', dropout=0.3, recurrent_dropout=0.2))
 model.add(Dense(45, activation='sigmoid'))
 
 # try using different optimizers and different optimizer configs
