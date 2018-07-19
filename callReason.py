@@ -40,21 +40,21 @@ for ele in call_list:
 encoder = LabelEncoder()
 encoded_Y = encoder.fit_transform(y_train)
 # convert integers to dummy variables (one hot encoding)
-dummy_y = np_utils.to_categorical(encoded_Y)
+y = np_utils.to_categorical(encoded_Y)
 
 #手工生成多分类标签
-y = [[0 for i in range(45)] for j in range(len(x_train))]
-for i in range(len(y_train)):
-    for j in range(len(y_class)):
-        #
-        print('i = '+str(i)+'   j= '+str(j)+'   yti = '+y_train[i] + '  ycj= ' + y_class[j])
-        if y_train[i] == y_class[j]:
-            print('匹配')
-            y[i][j] = 1
-            break
-    print(y[i])
-#
-y = np.array(y)
+# y = [[0 for i in range(45)] for j in range(len(x_train))]
+# for i in range(len(y_train)):
+#     for j in range(len(y_class)):
+#         #
+#         print('i = '+str(i)+'   j= '+str(j)+'   yti = '+y_train[i] + '  ycj= ' + y_class[j])
+#         if y_train[i] == y_class[j]:
+#             print('匹配')
+#             y[i][j] = 1
+#             break
+#     print(y[i])
+# #
+# y = np.array(y)
 # 分词
 X_train = []
 w_str = ''
@@ -95,7 +95,12 @@ print(len(sequences))
 x_data = pad_sequences(sequences, maxlen=500, truncating='pre')
 #
 x_train, x_test, y_train, y_test = train_test_split(x_data, y, test_size=0.33333, random_state=77)
+#
+import pickle
+with open('xy.pkl', 'wb') as f:
+    pickle.dump((x_data, y), f)
 
+# LSTM 目前最高准确率 0.4528
 from keras.models import Sequential
 from keras.layers import Dense, Embedding
 from keras.layers import LSTM
@@ -104,7 +109,7 @@ print('Build model...')
 model = Sequential()
 model.add(Embedding(20000, 128))
 model.add(LSTM(64, dropout=0.3, recurrent_dropout=0.3))
-model.add(Dense(45, activation='softmax'))
+model.add(Dense(38, activation='softmax'))
 
 # try using different optimizers and different optimizer configs
 model.compile(loss='categorical_crossentropy',
@@ -112,12 +117,16 @@ model.compile(loss='categorical_crossentropy',
               metrics=['accuracy'])
 
 print('Train...')
+# model.load_weights('weights', by_name=False)
 model.fit(x_train, y_train,
-          batch_size=64,
-          epochs=15,
+          batch_size=128,
+          epochs=50,
           validation_data=(x_test, y_test))
 
 score, acc = model.evaluate(x_test, y_test,
-                            batch_size=64)
+                            batch_size=128)
+# 保存权重
+model.save_weights('weights')
+
 print('Test score:', score)
 print('Test accuracy:', acc)
