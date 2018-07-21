@@ -18,9 +18,9 @@ y_class = ['投诉（含抱怨）网络问题', '投诉（含抱怨）营销问�
 with open('callreason.train.fj_and_sh.2w', 'r', encoding='UTF-8') as train_txt:
     content = train_txt.read()
 call_list = content.split('\n\n')
-print(call_list[1])
-for i in call_list[1].split('\t'):
-    print(i)
+# print(call_list[1])
+# for i in call_list[1].split('\t'):
+#     print(i)
 
 x_train = []
 y_train = []
@@ -31,6 +31,10 @@ for ele in call_list:
     sents = ele.split('\n')
     y_str = sents[0].split('\t')[1:]    # 两个元素或一个 一级分类 二级分类
     y_str = ''.join(y_str)
+    # 找出空白标签
+    if y_str == '':
+        print(sents[0])
+
     x_str = []  # 多条对话
     for i in sents[1:]:
         x_str.append(i.split('\t')[1])
@@ -39,28 +43,20 @@ for ele in call_list:
 # -----
 encoder = LabelEncoder()
 encoded_Y = encoder.fit_transform(y_train)
+#
+print(len(encoder.classes_))
 # convert integers to dummy variables (one hot encoding)
 y = np_utils.to_categorical(encoded_Y)
+# y = encoded_Y
 
-#手工生成多分类标签
-# y = [[0 for i in range(45)] for j in range(len(x_train))]
-# for i in range(len(y_train)):
-#     for j in range(len(y_class)):
-#         #
-#         print('i = '+str(i)+'   j= '+str(j)+'   yti = '+y_train[i] + '  ycj= ' + y_class[j])
-#         if y_train[i] == y_class[j]:
-#             print('匹配')
-#             y[i][j] = 1
-#             break
-#     print(y[i])
-# #
-# y = np.array(y)
 # 分词
 X_train = []
 w_str = ''
 jieba.suggest_freq('兆', tune=True)
 jieba.suggest_freq('块', tune=True)
 jieba.suggest_freq('流量', tune=True)
+#
+stop_list = {}.fromkeys([line.strip() for line in open('stopwords.txt', encoding='UTF-8')])
 for x in x_train:
     x_split = []
     for s in x:
@@ -72,44 +68,63 @@ for x in x_train:
         if len(line) > 0:
             x_split.extend(line)
 
-        word_str = ' '.join(x_split)
-        l_str = ' '.join(line) + '\n'
-        w_str = w_str + l_str
+        # word_str = ' '.join(x_split)
+        # l_str = ' '.join(line) + '\n'
+        # w_str = w_str + l_str
     # w_str = w_str + '$'
-    X_train.append(' '.join(x_split))
+    x_s = [word for word in x_split if word not in stop_list]
+    X_train.append(' '.join(x_s))
 
-# with open('seg', 'w', encoding='UTF-8') as fw:
-#     fw.write(w_str)
+# ---------分词去停用词完成：X_train, y ---------------
 
-# word2vec.word2vec('seg', 'vec.bin', size=10, verbose=True)
-# model = word2vec.load('vec.bin')
+# 词序列模型 x_data
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-tokenizer = Tokenizer(nb_words=20000)
+tokenizer = Tokenizer(nb_words=30000)
 tokenizer.fit_on_texts(X_train)
 sequences = tokenizer.texts_to_sequences(X_train)
 
 print(sequences[0])
 print(len(sequences))
 
-x_data = pad_sequences(sequences, maxlen=500, truncating='pre')
+x_data = pad_sequences(sequences, maxlen=600, truncating='pre')
 #
 x_train, x_test, y_train, y_test = train_test_split(x_data, y, test_size=0.33333, random_state=77)
 #
-import pickle
-with open('xxyy.pkl', 'wb') as f:
-    pickle.dump((x_train, x_test, y_train, y_test), f)
+print(np.array(x_train).shape, 'x_train维度')
+print(np.array(y_train).shape, 'y_train维度')
+print(np.array(x_test).shape, 'x_test维度')
+print(np.array(y_test).shape, 'y_test维度')
+# import pickle
+# with open('xxyy.pkl', 'wb') as f:
+#     pickle.dump((x_train, x_test, y_train, y_test), f)
 
-# LSTM 目前最高准确率 0.4528
+# ------------- 词袋模型 ----------
+# from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+# from sklearn.feature_selection import SelectKBest, chi2
+#
+# count_vec = CountVectorizer(ngram_range=(1, 5), token_pattern=r'\b\w+\b', min_df=1)
+# document_term_matrix = count_vec.fit_transform(X_train)
+# vocabulary = count_vec.vocabulary_  # 得到词汇表
+# tf_idf_transformer = TfidfTransformer()
+# tf_idf_matrix = tf_idf_transformer.fit_transform(document_term_matrix)
+#
+# x_train, x_test, y_train, y_test = train_test_split(tf_idf_matrix, y, test_size=0.33333, random_state=77)
+#
+# sel = SelectKBest(chi2, k=50000)
+# x_train = sel.fit_transform(x_train, y_train)
+# x_test = sel.transform(x_test)
+
+# LSTM 目前最高准确率 0.4642
 from keras.models import Sequential
 from keras.layers import Dense, Embedding
 from keras.layers import LSTM
 
 print('Build model...')
 model = Sequential()
-model.add(Embedding(20000, 128))
+model.add(Embedding(30000, 128))
 model.add(LSTM(64, dropout=0.3, recurrent_dropout=0.3))
-model.add(Dense(38, activation='softmax'))
+model.add(Dense(37, activation='softmax'))
 
 # try using different optimizers and different optimizer configs
 model.compile(loss='categorical_crossentropy',
@@ -126,7 +141,43 @@ model.fit(x_train, y_train,
 score, acc = model.evaluate(x_test, y_test,
                             batch_size=128)
 # 保存权重
-model.save_weights('weights')
+# model.save_weights('weights')
 
 print('Test score:', score)
 print('Test accuracy:', acc)
+
+# ---------------- xgb -------------------
+# import xgboost as xgb
+#
+# train_data = x_train
+# test_data = x_test
+# xgb_train = xgb.DMatrix(train_data, label=y_train)
+# xgb_test = xgb.DMatrix(test_data, label=y_test)
+# params = {
+#     'booster': 'gbtree',
+#     'objective': 'multi:softprob',  # 多分类的问题
+#     # 'objective': 'binary:logistic',
+#     # 'num_class': 38,  # 类别数，与 multisoftmax 并用
+#     'num_class': 38,
+#     'gamma': 0.1,  # 用于控制是否后剪枝的参数,越大越保守，一般0.1、0.2这样子。
+#     'max_depth': 16,  # 构建树的深度，越大越容易过拟合
+#     'lambda': 3,  # 控制模型复杂度的权重值的L2正则化项参数，参数越大，模型越不容易过拟合。
+#     'subsample': 0.7,  # 随机采样训练样本
+#     'colsample_bytree': 0.7,  # 生成树时进行的列采样
+#     'min_child_weight': 1,
+#     # 这个参数默认是 1，是每个叶子里面 h 的和至少是多少，对正负样本不均衡时的 0-1 分类而言
+#     # ，假设 h 在 0.01 附近，min_child_weight 为 1 意味着叶子节点中最少需要包含 100 个样本。
+#     # 这个参数非常影响结果，控制叶子节点中二阶导的和的最小值，该参数值越小，越容易 overfitting。
+#     'silent': 0,  # 设置成1则没有运行信息输出，最好是设置为0.
+#     'eta': 0.05,  # 如同学习率
+#     'seed': 1000,
+#
+#     'nthread': 6,  # cpu 线程数
+#     'eval_metric': 'merror'
+#     }
+#
+# plst = list(params.items())
+# num_rounds = 10000  # 迭代次数model
+# watchlist = [(xgb_train, 'train'), (xgb_test, 'val')]
+# # 训练模型
+# model = xgb.train(plst, xgb_train, num_rounds, watchlist, early_stopping_rounds=100)
