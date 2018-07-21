@@ -46,8 +46,8 @@ encoded_Y = encoder.fit_transform(y_train)
 #
 print(len(encoder.classes_))
 # convert integers to dummy variables (one hot encoding)
-y = np_utils.to_categorical(encoded_Y)
-# y = encoded_Y
+y = np_utils.to_categorical(encoded_Y)    # for LSTM
+# y = encoded_Y   # for xgb
 
 # 分词
 X_train = []
@@ -77,7 +77,7 @@ for x in x_train:
 
 # ---------分词去停用词完成：X_train, y ---------------
 
-# 词序列模型 x_data
+# ------- 词序列模型 x_data -------
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 tokenizer = Tokenizer(nb_words=30000)
@@ -96,7 +96,7 @@ print(np.array(y_train).shape, 'y_train维度')
 print(np.array(x_test).shape, 'x_test维度')
 print(np.array(y_test).shape, 'y_test维度')
 # import pickle
-# with open('xxyy.pkl', 'wb') as f:
+# with open('xxyy-squ.pkl', 'wb') as f:
 #     pickle.dump((x_train, x_test, y_train, y_test), f)
 
 # ------------- 词袋模型 ----------
@@ -111,14 +111,19 @@ print(np.array(y_test).shape, 'y_test维度')
 #
 # x_train, x_test, y_train, y_test = train_test_split(tf_idf_matrix, y, test_size=0.33333, random_state=77)
 #
+# # import pickle
+# # with open('xxyy-tfidf.pkl', 'wb') as f:
+# #     pickle.dump((x_train, x_test, y_train, y_test), f)
+#
 # sel = SelectKBest(chi2, k=50000)
 # x_train = sel.fit_transform(x_train, y_train)
 # x_test = sel.transform(x_test)
 
-# LSTM 目前最高准确率 0.4642
+# ------ LSTM 目前最高准确率 0.4879 --------
 from keras.models import Sequential
 from keras.layers import Dense, Embedding
 from keras.layers import LSTM
+from keras.layers import Bidirectional
 
 print('Build model...')
 model = Sequential()
@@ -128,7 +133,7 @@ model.add(Dense(37, activation='softmax'))
 
 # try using different optimizers and different optimizer configs
 model.compile(loss='categorical_crossentropy',
-              optimizer='adam',
+              optimizer='rmsprop',
               metrics=['accuracy'])
 
 print('Train...')
@@ -157,8 +162,8 @@ print('Test accuracy:', acc)
 #     'booster': 'gbtree',
 #     'objective': 'multi:softprob',  # 多分类的问题
 #     # 'objective': 'binary:logistic',
-#     # 'num_class': 38,  # 类别数，与 multisoftmax 并用
-#     'num_class': 38,
+#     # 'num_class': 37,  # 类别数，与 multisoftmax 并用
+#     'num_class': 37,
 #     'gamma': 0.1,  # 用于控制是否后剪枝的参数,越大越保守，一般0.1、0.2这样子。
 #     'max_depth': 16,  # 构建树的深度，越大越容易过拟合
 #     'lambda': 3,  # 控制模型复杂度的权重值的L2正则化项参数，参数越大，模型越不容易过拟合。
