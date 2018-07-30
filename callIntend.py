@@ -63,5 +63,5 @@ print('z_train: '+ str(len(z_train)))
 
 import pickle
 with open('xxyyzz.pkl', 'wb') as f:
-    pickle.dump((x_train, x_test, y_train, y_test,z_train, z_test), f)
+    pickle.dump((x_train, x_test, y_train, y_test, z_train, z_test), f)
 
