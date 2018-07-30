@@ -55,3 +55,13 @@ print(len(x))
 x = pad_sequences(x, maxlen=10, truncating='pre')
 print(x[0])
 # --------- x 序列化完成 ------
+x_train, x_test, y_train, y_test, z_train, z_test = train_test_split(x, y, z, test_size=0.33333, random_state=77)
+#
+print('x_train: '+ str(len(x_train)))
+print('y_train: '+ str(len(y_train)))
+print('z_train: '+ str(len(z_train)))
+
+import pickle
+with open('xxyyzz.pkl', 'wb') as f:
+    pickle.dump((x_train, x_test, y_train, y_test,z_train, z_test), f)
+
