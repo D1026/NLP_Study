@@ -36,6 +36,8 @@ z = mlb.fit_transform(slos)
 # test
 print(mlb.classes_)
 print(z[3277])
+print('y的维度：' + str(len(y[0])))     # 67
+print('z的维度：' + str(len(z[0])))     # 119
 # -------  label: y,z 处理完毕 -------
 seg_sts = []
 for i in sts:
@@ -65,3 +67,29 @@ import pickle
 with open('xxyyzz.pkl', 'wb') as f:
     pickle.dump((x_train, x_test, y_train, y_test, z_train, z_test), f)
 
+# ------------ LSTM ------------
+import pickle
+with open('xxyyzz.pkl', 'rb') as f:
+    x_train, x_test, y_train, y_test, z_train, z_test = pickle.load(f)
+
+from keras.models import Sequential
+from keras.layers import Dense, Embedding
+from keras.layers import LSTM
+from keras.layers import Bidirectional
+
+print('Build model...')
+model = Sequential()
+model.add(Embedding(30000, 128))
+model.add(LSTM(64, dropout=0.2, recurrent_dropout=0.2))
+model.add(Dense(67, activation='sigmoid'))
+
+# try using different optimizers and different optimizer configs
+model.compile(loss='binary_crossentropy',
+              optimizer='rmsprop',
+              metrics=['categorical_accuracy'])
+
+print('Train...')
+model.fit(x_train, y_train,
+          batch_size=128,
+          epochs=50,
+          validation_data=(x_test, y_test))
