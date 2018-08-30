@@ -1,5 +1,5 @@
 import json
-import jieba
+import jieba.posseg as ps
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.model_selection import train_test_split
 
@@ -60,37 +60,109 @@ print('预测数据数量：'+str(len(testB_sts)))
 sts = train_sts.extend(testB_sts)
 # -----
 seg_sts = []
+seg_fls = []
 for i in sts:
-    wl = jieba.lcut(i)
-    seg_sts.append(' '.join(wl))
+    wp = ps.cut(i)
+    lw = []
+    lf = []
+    for w, f in wp:
+        lw.append(w)
+        lf.append(f)
+    seg_sts.append(' '.join(lw))
+    seg_fls.append(' '.join(lf))
 print(seg_sts[0])
 print('所有sentences数量：' + str(len(seg_sts)))
 
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-tokenizer = Tokenizer(num_words=30000)
-tokenizer.fit_on_texts(seg_sts)
-x = tokenizer.texts_to_sequences(seg_sts)
+tokenizer1 = Tokenizer(num_words=30000)
+tokenizer1.fit_on_texts(seg_sts)
+x1 = tokenizer1.texts_to_sequences(seg_sts)
+tokenizer2 = Tokenizer(num_words=32)
+tokenizer2.fit_on_texts(seg_fls)
+x2 = tokenizer2.texts_to_sequences(seg_sts)
 
-print(x[0])
-print(len(x))
+print(x1[0])
+print(len(x1))
 
-x = pad_sequences(x, maxlen=10, truncating='pre')
-print(x[0])
-predict_x = x[20001:]
-x = x[:20001]
+x1 = pad_sequences(x1, maxlen=10, truncating='pre')
+print(x1[0])
+predict_x1 = x1[20001:]
+x1 = x1[:20001]
+x2 = pad_sequences(x2, maxlen=10, truncating='pre')
+predict_x2 = x2[20001:]
+x2 = x2[:20001]
 # --------- x 序列化完成 ------
-x_train, x_test, y_train, y_test, z_train, z_test = train_test_split(x, y, z, test_size=0.2, random_state=77)
+x1_train, x1_test, x2_train, x2_test, y_train, y_test, z_train, z_test = train_test_split(x1, x2, y, z, test_size=0.2, random_state=77)
 #
-print('x_train: '+ str(len(x_train)))
+print('x2_train: '+ str(len(x2_train)))
 print('y_train: '+ str(len(y_train)))
 print('z_train: '+ str(len(z_train)))
 
-import pickle
-with open('xxyyzz.pkl', 'wb') as f:
-    pickle.dump((x_train, x_test, y_train, y_test, z_train, z_test), f)
+# import pickle
+# with open('xxyyzz.pkl', 'wb') as f:
+#     pickle.dump((x_train, x_test, y_train, y_test, z_train, z_test), f)
 
-# ------------ LSTM ------------
+# ------------ LSTM + fasttext ------------
+from keras.layers import *
+from keras.models import *
+from keras.callbacks import *
+label_num = [13, 40, 7, 74]
+vocab_dim = 300
+pos_dim = 30
+vocabulary_size = 30000
+pos_size = 32
+
+
+def build_input(input_dim, output_dim, shape):
+    inputs = Input(shape=shape)
+    x = Embedding(output_dim=output_dim, input_dim=input_dim + 1, mask_zero=False,
+                    input_length=shape[0])(inputs)
+
+    return inputs, x
+
+
+def concat_output(x_right, x_left, vocab_dimension, pos_dimension):
+    x = Concatenate()([x_right, x_left])
+    x = Dropout(0.5)(x)
+    x = AveragePooling1D(pool_size=1)(x)
+    x = Reshape((-1, vocab_dimension + pos_dimension))(x)
+    print(x.shape)
+    x = Dropout(0.5)(x)
+    x = Bidirectional(GRU(300))(x)
+
+    return x
+
+
+inputs_w, x_w = build_input(vocabulary_size, vocab_dim, x1_train[0].shape)
+inputs_f, x_f = build_input(pos_size, pos_dim, x2_train[0].shape)
+x = concat_output(x_w, x_f, vocab_dim, pos_dim)
+
+predict_y = Dense(67, activation='softmax', name="intend")(x)
+predict_z = Dense(119, activation='softmax', name="slots")(x)
+
+model = Model(inputs=[inputs_w, inputs_f],
+              outputs=[predict_y, predict_z])
+
+print("训练...")
+
+batch_size = 64
+tensorboard = TensorBoard(log_dir="./log2/2")
+model.compile(loss='binary_crossentropy',
+              optimizer='rmsprop',
+              metrics=['accuracy'], loss_weights=[0.2, 1.0, 0.5, 0.1])
+# validation_data=([X_test, P_test], [action_test, target_test, key_test, value_test]),
+model.fit([x1_train, x2_train], [y_train, z_train], batch_size=batch_size, epochs=64,
+           verbose=1, callbacks=[tensorboard])
+
+predict_label = model.predict(x=[x1_test, x2_test])
+
+predict_y = predict_label[0]
+predict_z = predict_label[1]
+
+
+
+# ---------------- lstm -----------------
 import pickle
 with open('xxyyzz.pkl', 'rb') as f:
     x_train, x_test, y_train, y_test, z_train, z_test = pickle.load(f)
